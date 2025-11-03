@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/kitops-ml/kitops/pkg/cmd/options"
+	"github.com/kitops-ml/kitops/pkg/kit"
 	"github.com/kitops-ml/kitops/pkg/lib/constants"
 	"github.com/kitops-ml/kitops/pkg/lib/util"
 	"github.com/kitops-ml/kitops/pkg/output"
@@ -81,7 +82,14 @@ func runCommand(opts *loginOptions) func(cmd *cobra.Command, args []string) erro
 			return output.Fatalf("Invalid arguments: %s", err)
 		}
 
-		err := login(cmd.Context(), opts)
+		kitOpts := &kit.LoginOptions{
+			NetworkOptions: opts.NetworkOptions,
+			ConfigHome:     opts.configHome,
+			Registry:       opts.registry,
+			Credential:     opts.credential,
+		}
+
+		err := kit.Login(cmd.Context(), kitOpts)
 		if err != nil {
 			return output.Fatalln(err)
 		}

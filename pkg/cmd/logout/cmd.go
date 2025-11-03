@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kitops-ml/kitops/pkg/kit"
 	"github.com/kitops-ml/kitops/pkg/lib/constants"
 	"github.com/kitops-ml/kitops/pkg/output"
 
@@ -59,7 +60,13 @@ func runCommand(opts *logoutOptions) func(cmd *cobra.Command, args []string) err
 		if err := opts.complete(cmd.Context(), args); err != nil {
 			return output.Fatalf("Invalid arguments: %s", err)
 		}
-		err := logout(cmd.Context(), opts.registry, opts.credentialStoreHome)
+
+		kitOpts := &kit.LogoutOptions{
+			ConfigHome: opts.credentialStoreHome,
+			Registry:   opts.registry,
+		}
+
+		err := kit.Logout(cmd.Context(), kitOpts)
 		if err != nil {
 			return output.Fatalln(err)
 		}
@@ -73,6 +80,6 @@ func (opts *logoutOptions) complete(ctx context.Context, args []string) error {
 	if !ok {
 		return fmt.Errorf("default config path not set on command context")
 	}
-	opts.credentialStoreHome = constants.CredentialsPath(configHome)
+	opts.credentialStoreHome = configHome
 	return nil
 }

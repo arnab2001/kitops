@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/kitops-ml/kitops/pkg/cmd/options"
+	"github.com/kitops-ml/kitops/pkg/kit"
 	"github.com/kitops-ml/kitops/pkg/lib/completion"
 	"github.com/kitops-ml/kitops/pkg/lib/constants"
 	"github.com/kitops-ml/kitops/pkg/lib/repo/util"
@@ -187,7 +188,7 @@ func runCommand(opts *unpackOptions) func(*cobra.Command, []string) error {
 		output.Infof("Unpacking to %s", unpackTo)
 
 		// Convert command options to library options
-		libOpts := &unpack.UnpackOptions{
+		kitOpts := &kit.UnpackOptions{
 			ModelRef:       opts.modelRef,
 			UnpackDir:      opts.unpackDir,
 			ConfigHome:     opts.configHome,
@@ -203,19 +204,19 @@ func runCommand(opts *unpackOptions) func(*cobra.Command, []string) error {
 			deprecatedFilters := unpack.FiltersFromUnpackConf(
 				conf.unpackKitfile, conf.unpackModels, conf.unpackCode,
 				conf.unpackDatasets, conf.unpackDocs)
-			libOpts.FilterConfs = deprecatedFilters
+			kitOpts.FilterConfs = deprecatedFilters
 		} else if len(opts.filters) > 0 {
 			// Parse filters using library functionality
 			for _, filter := range opts.filters {
-				filterConf, err := unpack.ParseFilter(filter)
+				filterConf, err := kit.ParseFilter(filter)
 				if err != nil {
 					return output.Fatalf("Invalid filter %q: %s", filter, err)
 				}
-				libOpts.FilterConfs = append(libOpts.FilterConfs, *filterConf)
+				kitOpts.FilterConfs = append(kitOpts.FilterConfs, *filterConf)
 			}
 		}
 
-		err := unpack.UnpackModelKit(cmd.Context(), libOpts)
+		err := kit.Unpack(cmd.Context(), kitOpts)
 		if err != nil {
 			return output.Fatalln(err)
 		}
