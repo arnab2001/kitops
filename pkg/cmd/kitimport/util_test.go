@@ -26,24 +26,29 @@ import (
 func TestExtractRepoFromURL(t *testing.T) {
 	testcases := []struct {
 		input           string
-		expected        string
+		expectedRepo    string
+		expectedKind    string
 		expectErrRegexp string
 	}{
-		{input: "organization/repository", expected: "organization/repository"},
-		{input: "https://example.com/org/repo", expected: "org/repo"},
-		{input: "https://huggingface.co/org/repo", expected: "org/repo"},
-		{input: "https://github.com/org/repo", expected: "org/repo"},
-		{input: "organization/repository.with-dots.and_CAPS", expected: "organization/repository.with-dots.and_CAPS"},
-		{input: "https://huggingface.co/org/trailing-slash/", expected: "org/trailing-slash"},
-		{input: "https://github.com/org/repo.git", expected: "org/repo.git"},
+		{input: "organization/repository", expectedRepo: "organization/repository", expectedKind: "model"},
+		{input: "https://example.com/org/repo", expectedRepo: "org/repo", expectedKind: "model"},
+		{input: "https://huggingface.co/org/repo", expectedRepo: "org/repo", expectedKind: "model"},
+		{input: "https://github.com/org/repo", expectedRepo: "org/repo", expectedKind: "model"},
+		{input: "organization/repository.with-dots.and_CAPS", expectedRepo: "organization/repository.with-dots.and_CAPS", expectedKind: "model"},
+		{input: "https://huggingface.co/org/trailing-slash/", expectedRepo: "org/trailing-slash", expectedKind: "model"},
+		{input: "https://github.com/org/repo.git", expectedRepo: "org/repo.git", expectedKind: "model"},
+		{input: "https://huggingface.co/datasets/org/repo", expectedRepo: "org/repo", expectedKind: "dataset"},
+		{input: "datasets/org/repo", expectedRepo: "org/repo", expectedKind: "dataset"},
+		{input: "https://huggingface.co/datasets/organization/repository", expectedRepo: "organization/repository", expectedKind: "dataset"},
 		{input: ":///invalidURL", expectErrRegexp: "failed to parse url.*"},
 		{input: "too/many/path/segments", expectErrRegexp: "could not extract organization and repository from.*"},
 		{input: "https://github.com/kitops-ml/github.com/kitops-ml/kitops/tree/main", expectErrRegexp: "could not extract organization and repository from.*"},
+		{input: "datasets/invalid", expectErrRegexp: "invalid dataset URL format.*"},
 	}
 
 	for _, tt := range testcases {
 		t.Run(fmt.Sprintf("handles %s", tt.input), func(t *testing.T) {
-			actual, actualErr := extractRepoFromURL(tt.input)
+			actualRepo, actualKind, actualErr := extractRepoFromURL(tt.input)
 			if tt.expectErrRegexp != "" {
 				if !assert.Error(t, actualErr) {
 					return
@@ -53,7 +58,8 @@ func TestExtractRepoFromURL(t *testing.T) {
 				if !assert.NoError(t, actualErr) {
 					return
 				}
-				assert.Equal(t, tt.expected, actual)
+				assert.Equal(t, tt.expectedRepo, actualRepo)
+				assert.Equal(t, tt.expectedKind, actualKind)
 			}
 		})
 	}

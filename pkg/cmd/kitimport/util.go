@@ -163,20 +163,35 @@ func getEditorName() (string, error) {
 }
 
 // extractRepoFromURL attempts to normalize a string or URL into a repository name as is used on GitHub and Huggingface.
-// Returns an error we cannot automatically handle the input URL/string.
-//   - https://example.com/segment1/segment2 --> segment1/segment2
-//   - 'organization/repository'             --> 'organization/repository'
-func extractRepoFromURL(rawUrl string) (string, error) {
+// Returns the normalized repository path (org/repo), the kind ("model" or "dataset"), and an error if parsing fails.
+//   - https://huggingface.co/org/repo --> (org/repo, "model", nil)
+//   - https://huggingface.co/datasets/org/repo --> (org/repo, "dataset", nil)
+//   - 'organization/repository' --> (organization/repository, "model", nil)
+//   - 'datasets/organization/repository' --> (organization/repository, "dataset", nil)
+func extractRepoFromURL(rawUrl string) (string, string, error) {
 	u, err := url.Parse(rawUrl)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse url: %w", err)
+		return "", "", fmt.Errorf("failed to parse url: %w", err)
 	}
 
 	path := strings.Trim(u.Path, "/")
 	segments := strings.Split(path, "/")
-	if len(segments) != 2 {
-		return "", fmt.Errorf("could not extract organization and repository from '%s'", path)
+
+	var kind string
+	var normalizedPath string
+
+	if len(segments) == 3 && segments[0] == "datasets" {
+		kind = "dataset"
+		normalizedPath = strings.Join(segments[1:], "/")
+	} else if len(segments) == 2 {
+		if segments[0] == "datasets" {
+			return "", "", fmt.Errorf("invalid dataset URL format: expected datasets/org/repo, got '%s'", path)
+		}
+		kind = "model"
+		normalizedPath = path
+	} else {
+		return "", "", fmt.Errorf("could not extract organization and repository from '%s'", path)
 	}
 
-	return path, nil
+	return normalizedPath, kind, nil
 }

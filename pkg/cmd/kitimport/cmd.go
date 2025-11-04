@@ -130,7 +130,7 @@ func (opts *importOptions) complete(ctx context.Context, args []string) error {
 	opts.repo = args[0]
 
 	if opts.tag == "" {
-		tag, err := extractRepoFromURL(opts.repo)
+		tag, _, err := extractRepoFromURL(opts.repo)
 		if err != nil {
 			output.Errorf("Could not generate tag from URL: %s", err)
 			return fmt.Errorf("use flag --tag to set a tag for ModelKit")

@@ -35,7 +35,8 @@ import (
 )
 
 const (
-	resolveURLFmt = "https://huggingface.co/%s/resolve/%s/%s"
+	modelResolveURLFmt   = "https://huggingface.co/%s/resolve/%s/%s"
+	datasetResolveURLFmt = "https://huggingface.co/datasets/%s/resolve/%s/%s"
 )
 
 func DownloadFiles(
@@ -43,7 +44,8 @@ func DownloadFiles(
 	modelRepo, repoRef, destDir string,
 	files []kfgen.FileListing,
 	token string,
-	maxConcurrency int) error {
+	maxConcurrency int,
+	kind string) error {
 
 	client := &http.Client{
 		Timeout: 1 * time.Hour,
@@ -54,6 +56,13 @@ func DownloadFiles(
 	var semErr error
 
 	progress, plog := output.NewDownloadProgress()
+
+	var resolveURLFmt string
+	if kind == "dataset" {
+		resolveURLFmt = datasetResolveURLFmt
+	} else {
+		resolveURLFmt = modelResolveURLFmt
+	}
 
 	for _, f := range files {
 		if err := sem.Acquire(errCtx, 1); err != nil {

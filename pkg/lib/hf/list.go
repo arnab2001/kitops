@@ -31,7 +31,8 @@ import (
 )
 
 const (
-	treeURLFmt = "https://huggingface.co/api/models/%s/tree/%s"
+	modelTreeURLFmt   = "https://huggingface.co/api/models/%s/tree/%s"
+	datasetTreeURLFmt = "https://huggingface.co/api/datasets/%s/tree/%s"
 )
 
 type hfTreeResponse []struct {
@@ -45,11 +46,19 @@ type hfErrorResponse struct {
 	Error string `json:"error"`
 }
 
-func ListFiles(ctx context.Context, modelRepo, ref string, token string) (*kfgen.DirectoryListing, error) {
+func ListFiles(ctx context.Context, modelRepo, ref string, token string, kind string) (*kfgen.DirectoryListing, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
-	baseURL, err := url.Parse(fmt.Sprintf(treeURLFmt, modelRepo, ref))
+
+	var treeURL string
+	if kind == "dataset" {
+		treeURL = fmt.Sprintf(datasetTreeURLFmt, modelRepo, ref)
+	} else {
+		treeURL = fmt.Sprintf(modelTreeURLFmt, modelRepo, ref)
+	}
+
+	baseURL, err := url.Parse(treeURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
