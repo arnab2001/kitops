@@ -180,5 +180,3 @@ func extractRepoFromURL(rawUrl string) (string, error) {
 
 	return path, nil
 }
-
-// AGENT_MODIFIED: Human review required before merge
