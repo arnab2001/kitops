@@ -26,29 +26,57 @@ import (
 func TestExtractRepoFromURL(t *testing.T) {
 	testcases := []struct {
 		input           string
-		expectedRepo    string
-		expectedKind    string
+		expected        string
 		expectErrRegexp string
 	}{
-		{input: "organization/repository", expectedRepo: "organization/repository", expectedKind: "model"},
-		{input: "https://example.com/org/repo", expectedRepo: "org/repo", expectedKind: "model"},
-		{input: "https://huggingface.co/org/repo", expectedRepo: "org/repo", expectedKind: "model"},
-		{input: "https://github.com/org/repo", expectedRepo: "org/repo", expectedKind: "model"},
-		{input: "organization/repository.with-dots.and_CAPS", expectedRepo: "organization/repository.with-dots.and_CAPS", expectedKind: "model"},
-		{input: "https://huggingface.co/org/trailing-slash/", expectedRepo: "org/trailing-slash", expectedKind: "model"},
-		{input: "https://github.com/org/repo.git", expectedRepo: "org/repo.git", expectedKind: "model"},
-		{input: "https://huggingface.co/datasets/org/repo", expectedRepo: "org/repo", expectedKind: "dataset"},
-		{input: "datasets/org/repo", expectedRepo: "org/repo", expectedKind: "dataset"},
-		{input: "https://huggingface.co/datasets/organization/repository", expectedRepo: "organization/repository", expectedKind: "dataset"},
+		{input: "organization/repository", expected: "organization/repository"},
+		{input: "https://example.com/org/repo", expected: "org/repo"},
+		{input: "https://huggingface.co/org/repo", expected: "org/repo"},
+		{input: "https://github.com/org/repo", expected: "org/repo"},
+		{input: "organization/repository.with-dots.and_CAPS", expected: "organization/repository.with-dots.and_CAPS"},
+		{input: "https://huggingface.co/org/trailing-slash/", expected: "org/trailing-slash"},
+		{input: "https://github.com/org/repo.git", expected: "org/repo.git"},
 		{input: ":///invalidURL", expectErrRegexp: "failed to parse url.*"},
 		{input: "too/many/path/segments", expectErrRegexp: "could not extract organization and repository from.*"},
 		{input: "https://github.com/kitops-ml/github.com/kitops-ml/kitops/tree/main", expectErrRegexp: "could not extract organization and repository from.*"},
-		{input: "datasets/invalid", expectErrRegexp: "invalid dataset URL format.*"},
 	}
 
 	for _, tt := range testcases {
 		t.Run(fmt.Sprintf("handles %s", tt.input), func(t *testing.T) {
-			actualRepo, actualKind, actualErr := extractRepoFromURL(tt.input)
+			actual, actualErr := extractRepoFromURL(tt.input)
+			if tt.expectErrRegexp != "" {
+				if !assert.Error(t, actualErr) {
+					return
+				}
+				assert.Regexp(t, tt.expectErrRegexp, actualErr.Error())
+			} else {
+				if !assert.NoError(t, actualErr) {
+					return
+				}
+				assert.Equal(t, tt.expected, actual)
+			}
+		})
+	}
+}
+
+func TestParseHuggingFaceRepo(t *testing.T) {
+	testcases := []struct {
+		input           string
+		expectedRepo    string
+		expectedType    hfRepoType
+		expectErrRegexp string
+	}{
+		{input: "https://huggingface.co/org/repo", expectedRepo: "org/repo", expectedType: hfRepoTypeModel},
+		{input: "https://huggingface.co/datasets/org/repo", expectedRepo: "org/repo", expectedType: hfRepoTypeDataset},
+		{input: "org/repo", expectedRepo: "org/repo", expectedType: hfRepoTypeModel},
+		{input: "datasets/org/repo", expectedRepo: "org/repo", expectedType: hfRepoTypeDataset},
+		{input: "datasets/only-one-segment", expectErrRegexp: "could not extract repository"},
+		{input: "https://example.com/org/repo", expectErrRegexp: "not a Hugging Face repository"},
+	}
+
+	for _, tt := range testcases {
+		t.Run(fmt.Sprintf("handles %s", tt.input), func(t *testing.T) {
+			actualRepo, actualType, actualErr := parseHuggingFaceRepo(tt.input)
 			if tt.expectErrRegexp != "" {
 				if !assert.Error(t, actualErr) {
 					return
@@ -59,7 +87,7 @@ func TestExtractRepoFromURL(t *testing.T) {
 					return
 				}
 				assert.Equal(t, tt.expectedRepo, actualRepo)
-				assert.Equal(t, tt.expectedKind, actualKind)
+				assert.Equal(t, tt.expectedType, actualType)
 			}
 		})
 	}

@@ -20,8 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/kitops-ml/kitops/pkg/artifact"
 	"github.com/kitops-ml/kitops/pkg/lib/constants"
@@ -37,7 +39,7 @@ import (
 
 func importUsingHF(ctx context.Context, opts *importOptions) error {
 	// Handle full HF URLs by extracting repository name from URL
-	repo, kind, err := extractRepoFromURL(opts.repo)
+	repo, repoType, err := parseHuggingFaceRepo(opts.repo)
 	if err != nil {
 		return fmt.Errorf("could not process URL %s: %w", opts.repo, err)
 	}
@@ -53,7 +55,7 @@ func importUsingHF(ctx context.Context, opts *importOptions) error {
 		}
 	}()
 
-	dirListing, err := hf.ListFiles(ctx, repo, opts.repoRef, opts.token, kind)
+	dirListing, err := hf.ListFiles(ctx, repo, opts.repoRef, opts.token, mapRepoType(repoType))
 	if err != nil {
 		return fmt.Errorf("failed to list files from HuggingFace API: %w", err)
 	}
@@ -106,7 +108,7 @@ func importUsingHF(ctx context.Context, opts *importOptions) error {
 	if err != nil {
 		return err
 	}
-	if err := hf.DownloadFiles(ctx, repo, opts.repoRef, tmpDir, toDownload, opts.token, opts.concurrency, kind); err != nil {
+	if err := hf.DownloadFiles(ctx, repo, opts.repoRef, tmpDir, toDownload, opts.token, opts.concurrency, mapRepoType(repoType)); err != nil {
 		return fmt.Errorf("error downloading repository: %w", err)
 	}
 
@@ -171,4 +173,47 @@ func kitfileHasCatchallLayer(kitfile *artifact.KitFile) bool {
 		}
 	}
 	return false
+}
+
+type hfRepoType int
+
+const (
+	hfRepoTypeModel hfRepoType = iota
+	hfRepoTypeDataset
+)
+
+func mapRepoType(repoType hfRepoType) hf.RepositoryType {
+	switch repoType {
+	case hfRepoTypeDataset:
+		return hf.RepoTypeDataset
+	default:
+		return hf.RepoTypeModel
+	}
+}
+
+func parseHuggingFaceRepo(rawURL string) (string, hfRepoType, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to parse url: %w", err)
+	}
+
+	if u.Host != "" && !strings.Contains(u.Host, "huggingface.co") {
+		return "", 0, fmt.Errorf("not a Hugging Face repository")
+	}
+
+	path := strings.Trim(u.Path, "/")
+	segments := strings.FieldsFunc(path, func(r rune) bool { return r == '/' })
+
+	if len(segments) >= 3 && segments[0] == "datasets" {
+		return strings.Join(segments[1:3], "/"), hfRepoTypeDataset, nil
+	}
+	if len(segments) == 2 && segments[0] == "datasets" {
+		return "", 0, fmt.Errorf("could not extract repository from path '%s'", path)
+	}
+
+	if len(segments) >= 2 {
+		return strings.Join(segments[len(segments)-2:], "/"), hfRepoTypeModel, nil
+	}
+
+	return "", 0, fmt.Errorf("could not extract repository from path '%s'", path)
 }

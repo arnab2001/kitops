@@ -46,13 +46,13 @@ type hfErrorResponse struct {
 	Error string `json:"error"`
 }
 
-func ListFiles(ctx context.Context, modelRepo, ref string, token string, kind string) (*kfgen.DirectoryListing, error) {
+func ListFiles(ctx context.Context, modelRepo, ref string, token string, repoType RepositoryType) (*kfgen.DirectoryListing, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
 	var treeURL string
-	if kind == "dataset" {
+	if repoType == RepoTypeDataset {
 		treeURL = fmt.Sprintf(datasetTreeURLFmt, modelRepo, ref)
 	} else {
 		treeURL = fmt.Sprintf(modelTreeURLFmt, modelRepo, ref)

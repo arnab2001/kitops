@@ -45,7 +45,7 @@ func DownloadFiles(
 	files []kfgen.FileListing,
 	token string,
 	maxConcurrency int,
-	kind string) error {
+	repoType RepositoryType) error {
 
 	client := &http.Client{
 		Timeout: 1 * time.Hour,
@@ -58,7 +58,7 @@ func DownloadFiles(
 	progress, plog := output.NewDownloadProgress()
 
 	var resolveURLFmt string
-	if kind == "dataset" {
+	if repoType == RepoTypeDataset {
 		resolveURLFmt = datasetResolveURLFmt
 	} else {
 		resolveURLFmt = modelResolveURLFmt

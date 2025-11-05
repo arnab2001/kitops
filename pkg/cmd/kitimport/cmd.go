@@ -130,13 +130,19 @@ func (opts *importOptions) complete(ctx context.Context, args []string) error {
 	opts.repo = args[0]
 
 	if opts.tag == "" {
-		tag, _, err := extractRepoFromURL(opts.repo)
-		if err != nil {
-			output.Errorf("Could not generate tag from URL: %s", err)
-			return fmt.Errorf("use flag --tag to set a tag for ModelKit")
+		var tagRepo string
+		if repo, _, err := parseHuggingFaceRepo(opts.repo); err == nil {
+			tagRepo = repo
+		} else {
+			repo, err := extractRepoFromURL(opts.repo)
+			if err != nil {
+				output.Errorf("Could not generate tag from URL: %s", err)
+				return fmt.Errorf("use flag --tag to set a tag for ModelKit")
+			}
+			tagRepo = repo
 		}
-		tag = strings.ToLower(tag)
-		opts.tag = fmt.Sprintf("%s:latest", tag)
+		tagRepo = strings.ToLower(tagRepo)
+		opts.tag = fmt.Sprintf("%s:latest", tagRepo)
 		output.Infof("Using tag %s. Use flag --tag to override", opts.tag)
 	}
 
