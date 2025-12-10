@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package kitimport
+package hf
 
 import (
 	"fmt"
@@ -23,27 +23,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExtractRepoFromURL(t *testing.T) {
+func TestParseHuggingFaceRepo(t *testing.T) {
 	testcases := []struct {
 		input           string
-		expected        string
+		expectedRepo    string
+		expectedType    RepositoryType
 		expectErrRegexp string
 	}{
-		{input: "organization/repository", expected: "organization/repository"},
-		{input: "https://example.com/org/repo", expected: "org/repo"},
-		{input: "https://huggingface.co/org/repo", expected: "org/repo"},
-		{input: "https://github.com/org/repo", expected: "org/repo"},
-		{input: "organization/repository.with-dots.and_CAPS", expected: "organization/repository.with-dots.and_CAPS"},
-		{input: "https://huggingface.co/org/trailing-slash/", expected: "org/trailing-slash"},
-		{input: "https://github.com/org/repo.git", expected: "org/repo.git"},
-		{input: ":///invalidURL", expectErrRegexp: "failed to parse url.*"},
-		{input: "too/many/path/segments", expectErrRegexp: "could not extract organization and repository from.*"},
-		{input: "https://github.com/kitops-ml/github.com/kitops-ml/kitops/tree/main", expectErrRegexp: "could not extract organization and repository from.*"},
+		{input: "https://huggingface.co/org/repo", expectedRepo: "org/repo", expectedType: RepoTypeModel},
+		{input: "https://huggingface.co/datasets/org/repo", expectedRepo: "org/repo", expectedType: RepoTypeDataset},
+		{input: "org/repo", expectedRepo: "org/repo", expectedType: RepoTypeModel},
+		{input: "datasets/org/repo", expectedRepo: "org/repo", expectedType: RepoTypeDataset},
+		{input: "datasets/only-one-segment", expectErrRegexp: "could not extract repository"},
+		{input: "https://example.com/org/repo", expectErrRegexp: "not a Hugging Face repository"},
 	}
 
 	for _, tt := range testcases {
 		t.Run(fmt.Sprintf("handles %s", tt.input), func(t *testing.T) {
-			actual, actualErr := extractRepoFromURL(tt.input)
+			actualRepo, actualType, actualErr := ParseHuggingFaceRepo(tt.input)
 			if tt.expectErrRegexp != "" {
 				if !assert.Error(t, actualErr) {
 					return
@@ -53,7 +50,8 @@ func TestExtractRepoFromURL(t *testing.T) {
 				if !assert.NoError(t, actualErr) {
 					return
 				}
-				assert.Equal(t, tt.expected, actual)
+				assert.Equal(t, tt.expectedRepo, actualRepo)
+				assert.Equal(t, tt.expectedType, actualType)
 			}
 		})
 	}

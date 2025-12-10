@@ -16,10 +16,46 @@
 
 package hf
 
+import (
+	"fmt"
+	"net/url"
+	"strings"
+)
+
 // RepositoryType represents the kind of Hugging Face repository.
 type RepositoryType int
 
 const (
-	RepoTypeModel RepositoryType = iota
+	RepoTypeUnknown RepositoryType = iota
+	RepoTypeModel
 	RepoTypeDataset
 )
+
+// ParseHuggingFaceRepo parses a Hugging Face repository URL or path and returns
+// the normalized repository path (org/repo) and the repository type.
+func ParseHuggingFaceRepo(rawURL string) (string, RepositoryType, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", RepoTypeUnknown, fmt.Errorf("failed to parse url: %w", err)
+	}
+
+	if u.Host != "" && !strings.Contains(u.Host, "huggingface.co") {
+		return "", RepoTypeUnknown, fmt.Errorf("not a Hugging Face repository")
+	}
+
+	path := strings.Trim(u.Path, "/")
+	segments := strings.Split(path, "/")
+
+	if len(segments) >= 3 && segments[0] == "datasets" {
+		return strings.Join(segments[1:3], "/"), RepoTypeDataset, nil
+	}
+	if len(segments) == 2 && segments[0] == "datasets" {
+		return "", RepoTypeUnknown, fmt.Errorf("could not extract repository from path '%s'", path)
+	}
+
+	if len(segments) >= 2 {
+		return strings.Join(segments[len(segments)-2:], "/"), RepoTypeModel, nil
+	}
+
+	return "", RepoTypeUnknown, fmt.Errorf("could not extract repository from path '%s'", path)
+}

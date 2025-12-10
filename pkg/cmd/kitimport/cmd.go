@@ -25,6 +25,7 @@ import (
 
 	"github.com/kitops-ml/kitops/pkg/lib/constants"
 	"github.com/kitops-ml/kitops/pkg/lib/git"
+	"github.com/kitops-ml/kitops/pkg/lib/hf"
 	repoutils "github.com/kitops-ml/kitops/pkg/lib/repo/util"
 	"github.com/kitops-ml/kitops/pkg/output"
 
@@ -131,7 +132,7 @@ func (opts *importOptions) complete(ctx context.Context, args []string) error {
 
 	if opts.tag == "" {
 		var tagRepo string
-		if repo, _, err := parseHuggingFaceRepo(opts.repo); err == nil {
+		if repo, _, err := hf.ParseHuggingFaceRepo(opts.repo); err == nil {
 			tagRepo = repo
 		} else {
 			repo, err := extractRepoFromURL(opts.repo)
