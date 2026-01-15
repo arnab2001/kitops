@@ -39,12 +39,21 @@ func ParseHuggingFaceRepo(rawURL string) (string, RepositoryType, error) {
 		return "", RepoTypeUnknown, fmt.Errorf("failed to parse url: %w", err)
 	}
 
-	if u.Host != "" && !strings.Contains(u.Host, "huggingface.co") {
-		return "", RepoTypeUnknown, fmt.Errorf("not a Hugging Face repository")
+	// Strict host validation - must be exactly "huggingface.co" or a proper subdomain
+	if u.Host != "" {
+		if u.Host != "huggingface.co" && !strings.HasSuffix(u.Host, ".huggingface.co") {
+			return "", RepoTypeUnknown, fmt.Errorf("not a Hugging Face repository")
+		}
 	}
 
 	path := strings.Trim(u.Path, "/")
 	segments := strings.Split(path, "/")
+
+	// Handle scheme-less URLs like "huggingface.co/datasets/org/repo"
+	// When there's no scheme, url.Parse puts everything in the path
+	if len(segments) > 0 && (segments[0] == "huggingface.co" || strings.HasSuffix(segments[0], ".huggingface.co")) {
+		segments = segments[1:] // Skip the host part from path
+	}
 
 	if len(segments) >= 3 && segments[0] == "datasets" {
 		return strings.Join(segments[1:3], "/"), RepoTypeDataset, nil

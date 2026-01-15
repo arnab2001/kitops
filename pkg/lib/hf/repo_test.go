@@ -36,6 +36,17 @@ func TestParseHuggingFaceRepo(t *testing.T) {
 		{input: "datasets/org/repo", expectedRepo: "org/repo", expectedType: RepoTypeDataset},
 		{input: "datasets/only-one-segment", expectErrRegexp: "could not extract repository"},
 		{input: "https://example.com/org/repo", expectErrRegexp: "not a Hugging Face repository"},
+		// Test for malicious URL that contains "huggingface.co" in hostname
+		{input: "https://huggingface.co.evil.com/org/repo", expectErrRegexp: "not a Hugging Face repository"},
+		// Test for scheme-less dataset URL
+		{input: "huggingface.co/datasets/org/repo", expectedRepo: "org/repo", expectedType: RepoTypeDataset},
+		// Test for scheme-less model URL
+		{input: "huggingface.co/org/repo", expectedRepo: "org/repo", expectedType: RepoTypeModel},
+		// Test URL with trailing slashes
+		{input: "https://huggingface.co/org/repo/", expectedRepo: "org/repo", expectedType: RepoTypeModel},
+		{input: "https://huggingface.co/datasets/org/repo/", expectedRepo: "org/repo", expectedType: RepoTypeDataset},
+		// Test with http (not https)
+		{input: "http://huggingface.co/org/repo", expectedRepo: "org/repo", expectedType: RepoTypeModel},
 	}
 
 	for _, tt := range testcases {
