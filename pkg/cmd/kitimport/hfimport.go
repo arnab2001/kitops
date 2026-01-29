@@ -36,10 +36,10 @@ import (
 )
 
 func importUsingHF(ctx context.Context, opts *importOptions) error {
-	// Handle full HF URLs by extracting repository name from URL
-	repo, err := extractRepoFromURL(opts.repo)
+	// Parse HuggingFace repository URL to extract repo name and type
+	repo, repoType, err := hf.ParseHuggingFaceRepo(opts.repo)
 	if err != nil {
-		return fmt.Errorf("could not process URL %s: %w", opts.repo, err)
+		return fmt.Errorf("could not process repository %s: %w", opts.repo, err)
 	}
 
 	tmpDir, cleanupTmp, err := cache.MkCacheDir("import", "")
@@ -53,7 +53,7 @@ func importUsingHF(ctx context.Context, opts *importOptions) error {
 		}
 	}()
 
-	dirListing, err := hf.ListFiles(ctx, repo, opts.repoRef, opts.token)
+	dirListing, err := hf.ListFiles(ctx, repo, opts.repoRef, opts.token, repoType)
 	if err != nil {
 		return fmt.Errorf("failed to list files from HuggingFace API: %w", err)
 	}
